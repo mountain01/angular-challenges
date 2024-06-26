@@ -1,17 +1,31 @@
+import { NgOptimizedImage } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FakeHttpService } from '../../data-access/fake-http.service';
+import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  FakeHttpService,
+  randTeacher,
+} from '../../data-access/fake-http.service';
 import { TeacherStore } from '../../data-access/teacher.store';
 import { CardType } from '../../model/card.model';
-import { Teacher } from '../../model/teacher.model';
 import { CardComponent } from '../../ui/card/card.component';
+import { ListItemComponent } from '../../ui/list-item/list-item.component';
 
 @Component({
   selector: 'app-teacher-card',
   template: `
     <app-card
-      [list]="teachers"
+      [list]="teachers()"
       [type]="cardType"
-      customClass="bg-light-red"></app-card>
+      (add)="addTeacher()"
+      customClass="bg-light-red">
+      <img ngSrc="assets/img/teacher.png" height="200" width="200" />
+      <ng-template #rowRef let-teacher>
+        <app-list-item
+          [id]="teacher.id"
+          [name]="teacher.firstName"
+          (delete)="deleteTeacher(teacher.id)" />
+      </ng-template>
+    </app-card>
   `,
   styles: [
     `
@@ -21,10 +35,10 @@ import { CardComponent } from '../../ui/card/card.component';
     `,
   ],
   standalone: true,
-  imports: [CardComponent],
+  imports: [CardComponent, NgOptimizedImage, ListItemComponent],
 })
 export class TeacherCardComponent implements OnInit {
-  teachers: Teacher[] = [];
+  teachers = toSignal(this.store.teachers$, { initialValue: [] });
   cardType = CardType.TEACHER;
 
   constructor(
@@ -34,7 +48,12 @@ export class TeacherCardComponent implements OnInit {
 
   ngOnInit(): void {
     this.http.fetchTeachers$.subscribe((t) => this.store.addAll(t));
+  }
+  addTeacher() {
+    this.store.addOne(randTeacher());
+  }
 
-    this.store.teachers$.subscribe((t) => (this.teachers = t));
+  deleteTeacher(id: number) {
+    this.store.deleteOne(id);
   }
 }
